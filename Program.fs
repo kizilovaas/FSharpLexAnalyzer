@@ -26,12 +26,11 @@ open System.Windows
 let main(_) =
     let app = Application()
 
-    let window = 
+    app.MainWindow <- 
         Uri("MainWindow.xaml", UriKind.Relative)
         |> Application.LoadComponent
         :?> Window
         |> MainWindow.initializeWindow
 
-    app.MainWindow <- window
-    window.Show()
+    app.MainWindow.Show()
     app.Run()
