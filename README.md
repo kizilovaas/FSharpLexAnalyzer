@@ -16,6 +16,6 @@
     - MainWindow.xaml.fs - функции GUI
 8.  В свойствах файла MainWindow.xaml настраиваем
     - Действие при сборке - Ресурс
-9.  В файле TextAnalyzer.fsproj добавляем
+9.  В файле FlexAnalyzer.fsproj добавляем
     - < Resource Include="data\MainWindow.xaml" />
     - < Compile Include="data\MainWindow.xaml.fs" />
