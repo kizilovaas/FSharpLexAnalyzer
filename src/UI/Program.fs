@@ -27,7 +27,7 @@ let main(_) =
     let app = Application()
 
     app.MainWindow <- 
-        Uri("MainWindow.xaml", UriKind.Relative)
+        Uri("src/UI/MainWindow.xaml", UriKind.Relative)
         |> Application.LoadComponent
         :?> Window
         |> MainWindow.initializeWindow
