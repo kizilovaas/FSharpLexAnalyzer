@@ -10,7 +10,7 @@
 		<Compile Include="src\Core\functions.fs" />
 		<Resource Include="src\UI\MainWindow.xaml" />
 		<Compile Include="src\UI\MainWindow.xaml.fs" />
-		<Compile Include="src\UI\Program.fs" />
+		<Compile Include="Program.fs" />
 	</ItemGroup>
 
 	<ItemGroup />
