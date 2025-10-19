@@ -8,6 +8,7 @@
 
 	<ItemGroup>
 		<Compile Include="src\Core\functions.fs" />
+		<Compile Include="src\UI\Chart.fs" />
 		<Resource Include="src\UI\MainWindow.xaml" />
 		<Compile Include="src\UI\MainWindow.xaml.fs" />
 		<Compile Include="Program.fs" />

@@ -3,6 +3,7 @@
 open System
 open System.Windows
 open System.Windows.Controls
+open FSharpLexAnalyzer.UI.Chart
 
 open functions
 
@@ -68,6 +69,10 @@ let initializeWindow (window: Window) =
         value1.Text <- scan textBox.Text |> sprintf "%d"
         value2.Text <- scan2 textBox.Text |> sprintf "%d"
         value3.Text <- scan3 textBox.Text |> sprintf "%d"
+
+        let chartCanvas = window.FindName("wordLengthChart") :?> Canvas
+        let data = wordStats textBox.Text
+        drawWordLengthChart chartCanvas data
     )
 
     // Очистка текстового окна
