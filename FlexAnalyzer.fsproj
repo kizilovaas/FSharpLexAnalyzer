@@ -7,6 +7,8 @@
   </PropertyGroup>
 
 	<ItemGroup>
+		<Content Include="src\Core\textProfiles.json" />
+		<Compile Include="src\Core\jsonData.fs" />
 		<Compile Include="src\Core\functions.fs" />
 		<Compile Include="src\UI\Chart.fs" />
 		<Resource Include="src\UI\MainWindow.xaml" />

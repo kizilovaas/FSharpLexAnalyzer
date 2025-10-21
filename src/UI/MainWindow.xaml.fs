@@ -6,6 +6,7 @@ open System.Windows.Controls
 open FSharpLexAnalyzer.UI.Chart
 
 open functions
+open jsonData
 
 
 let initializeWindow (window: Window) =
@@ -21,22 +22,7 @@ let initializeWindow (window: Window) =
     let value2 = window.FindName("value2") :?> TextBlock
     let value3 = window.FindName("value3") :?> TextBlock
     let itemsListBox = window.FindName("itemsListBox") :?> ListBox
-    let items = [|
-        "Человеческий научный текст";
-        "Человеческий законодательный текст";
-        "Человеческий литературный текст";
-        "Человеческий журналистский текст";
-        "Человеческий текст из соц.сетей";
-        "Нейросеть Grok (xAI)";
-        "Нейросеть ChatGPT (Google)";
-        "Нейросеть DeepSeek AI";
-        "Нейросеть GPT-4 (OpenAI)";
-        "Нейросеть Claude 3 (Anthropic)";
-        "Нейросеть YandexGPT";
-        "Нейросеть Bloom (BigScience)";
-        "Нейросеть LaMDA (Google)";
-        "Аномальный стиль текста";
-        "Неопределенный текст"|]
+    let items = loadTextProfiles ()
     itemsListBox.ItemsSource <- items
 
     // Изменение размера шрифта с ограничениями
