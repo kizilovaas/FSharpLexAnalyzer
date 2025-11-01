@@ -4,110 +4,69 @@ open System
 open System.Windows
 open System.Windows.Controls
 open FSharpLexAnalyzer.UI.Chart
-
 open functions
 open jsonData
 
-
 let initializeWindow (window: Window) =
-    
+
+    // ----------------------
     // Элементы управления
-    let btnInsert = window.FindName("btnInsert") :?> Button    
+    // ----------------------
+    let btnInsert = window.FindName("btnInsert") :?> Button
     let btnScan = window.FindName("btnScan") :?> Button
     let btnClear = window.FindName("btnClear") :?> Button
-    let btnLarge = window.FindName("btnLarge") :?> Button
-    let btnSmall = window.FindName("btnSmall") :?> Button
     let textBox = window.FindName("textBox") :?> TextBox
-    let value1 = window.FindName("value1") :?> TextBlock
-    let value2 = window.FindName("value2") :?> TextBlock
-    let value3 = window.FindName("value3") :?> TextBlock
-    let itemsListBox = window.FindName("itemsListBox") :?> ListBox
-    let items = loadTextProfiles ()
-    itemsListBox.ItemsSource <- items
 
-    // Изменение размера шрифта с ограничениями
-    let minFontSize = 8.0
-    let maxFontSize = 24.0
-    let mutable fontSize = 12.0
-    let updateFontSize delta =
-        let newSize = fontSize + delta
-        if newSize >= minFontSize && newSize <= maxFontSize then
-            fontSize <- newSize
-            textBox.FontSize <- fontSize
-            btnLarge.IsEnabled <- fontSize < maxFontSize
-            btnSmall.IsEnabled <- fontSize > minFontSize
+    let wordLengthChart = window.FindName("wordLengthChart") :?> Canvas
+    let lexicalDiversityChart = window.FindName("lexicalDiversityChart") :?> Canvas
+    let pronounChart = window.FindName("pronounChart") :?> Canvas
+    let uniquenessChart = window.FindName("uniquenessChart") :?> Canvas
 
-    // Вставка текста из буфера обмена
+    // ----------------------
+    // Вставка текста из буфера
+    // ----------------------
     btnInsert.Click.Add(fun _ ->
-        try
-            if Clipboard.ContainsText() then
-                let clipboardText = Clipboard.GetText()
-                textBox.Text <- clipboardText
-            else
-                textBox.Text <- "Буфер обмена не содержит текста"
-        with
-        | ex -> 
-            textBox.Text <- sprintf "Ошибка при вставке из буфера обмена: %s" ex.Message
+        if Clipboard.ContainsText() then textBox.Text <- Clipboard.GetText()
+        else textBox.Text <- "Буфер обмена не содержит текста"
     )
 
-    // Отправка текста на анализ  **** ДОПЕРЕДЕЛАТЬ ****
-    btnScan.Click.Add(fun _ ->
-        value1.Text <- scan textBox.Text |> sprintf "%d"
-        value2.Text <- scan2 textBox.Text |> sprintf "%d"
-        value3.Text <- scan3 textBox.Text |> sprintf "%d"
-
-        let chartCanvas = window.FindName("wordLengthChart") :?> Canvas
-        let data = wordStats textBox.Text
-        drawWordLengthChart chartCanvas data
-    )
-
-    // Очистка текстового окна
+    // ----------------------
+    // Очистка текста и графиков
+    // ----------------------
     btnClear.Click.Add(fun _ ->
         textBox.Clear()
+        wordLengthChart.Children.Clear()
+        lexicalDiversityChart.Children.Clear()
+        pronounChart.Children.Clear()
+        uniquenessChart.Children.Clear()
     )
 
-    // Увеличить шрифт
-    btnLarge.Click.Add(fun _ ->
-        updateFontSize 1.0
+    // ----------------------
+    // Анализ текста
+    // ----------------------
+    btnScan.Click.Add(fun _ ->
+        let text = textBox.Text.Trim()
+        if String.IsNullOrEmpty(text) then
+            MessageBox.Show("Введите текст для анализа", "Информация") |> ignore
+        else
+            // 1️⃣ Длины слов
+            let wlData = wordLengthStats text
+            drawWordLengthChart wordLengthChart wlData
+
+            // 2️⃣ Лексическое разнообразие
+            let lexData = lexicalDiversityStats text
+            drawWordLengthChart lexicalDiversityChart lexData
+
+            // 3️⃣ Частота местоимений
+            let pronData = pronounStats text
+            drawWordLengthChart pronounChart pronData
+
+            // 4️⃣ Уникальность слов
+            let uniqData = uniquenessStats text
+            drawWordLengthChart uniquenessChart uniqData
     )
-    
-    // Уменьшить шрифт
-    btnSmall.Click.Add(fun _ ->
-        updateFontSize -1.0
-    )
 
-    // *********************************************************
-    //         ВСЕ ДОПЕРЕДЕЛАТЬ И ПЕРЕДООПТИМИЗИРОВАТЬ
-    // *********************************************************
-
-    // Обработчик события выбора элемента
-    itemsListBox.SelectionChanged.AddHandler(fun sender e ->
-        match itemsListBox.SelectedItem with
-        | :? string as selectedItem ->
-            // Используем выбранный элемент
-            printfn "Выбран: %s" selectedItem
-            // Здесь можно добавить вашу логику обработки выбора
-        | _ -> ()
-    )
-
-    // Метод для получения выбранного элемента
-    let getSelectedItem() =
-        match itemsListBox.SelectedItem with
-        | :? string as item -> Some item
-        | _ -> None
-
-    // Метод для установки выбранного элемента по индексу
-    let setSelectedItem index =
-        if index >= 0 && index < itemsListBox.Items.Count then
-            itemsListBox.SelectedIndex <- index
-
-    // Метод для установки выбранного элемента по значению
-    let setSelectedItemByValue (value: string) =
-        let index = Array.tryFindIndex (fun item -> item = value) items
-        match index with
-        | Some i -> itemsListBox.SelectedIndex <- i
-        | None -> ()
-
-    // *********************************************************
-
+    // ----------------------
+    // Возвращаем окно
+    // ----------------------
     window

@@ -1,32 +1,28 @@
 ﻿module jsonData
 
-open System.Text.Json
 open System.IO
+open System.Text.Json
 
-// Путь к файлу с профилями текста
-let getJsonFilePath () = 
+type TextProfile = {
+    id: int
+    name: string
+    color: string
+    ``1``: float[]
+    ``2``: float[]
+    ``3``: float[]
+    ``4``: float[]
+    ``5``: float[]
+}
+
+let getJsonFilePath () =
     Path.Combine(__SOURCE_DIRECTORY__, "textProfiles.json")
 
-// Проверка файла на ошибки
-let checkFileAccess (filePath: string) =
-    if File.Exists(filePath) then
-        try 
-            use testStream = File.OpenRead(filePath)
-            Ok filePath
-        with 
-        | _ -> Error [|"Нет доступа к файлу"|]
-    else
-        Error [|$"Файл {filePath} не найден"|]
-
-// Список профилей текста либо ошибка
-let loadTextProfiles () =
-    match getJsonFilePath () |> checkFileAccess with
-    | Error error -> error
-    | Ok path ->
+let loadTextProfiles () : TextProfile list =
+    let path = getJsonFilePath()
+    if File.Exists path then
+        let text = File.ReadAllText(path)
         try
-            File.ReadAllText(path)
-            |> JsonSerializer.Deserialize<{| id: int; name: string |}[]>
-            |> Array.map (fun x -> x.name)
-        with 
-        | :? JsonException -> [|"Неверный формат JSON"|] 
-        | _ -> [|"Ошибка чтения файла"|]
+            JsonSerializer.Deserialize<TextProfile[]>(text) |> Array.toList
+        with
+        | _ -> []
+    else []
