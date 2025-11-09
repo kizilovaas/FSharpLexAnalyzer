@@ -19,9 +19,11 @@
 
             <!-- Панель кнопок -->
             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="5">
-                <Button Name="btnInsert" Content="Вставить" Margin="5" Padding="10,5"/>
-                <Button Name="btnScan" Content="Анализировать" Margin="5" Padding="10,5"/>
-                <Button Name="btnClear" Content="Стереть" Margin="5" Padding="10,5"/>
+                <Button Name="btnInsert" Content="Вставить" Margin="5" Padding="10,5" Background="Gray"/>
+                <Button Name="btnScan" Content="Анализировать" Margin="5" Padding="10,5" Background="LightGreen"/>
+                <Button Name="btnClear" Content="Стереть" Margin="5" Padding="10,5" Background="IndianRed"/>
+                <Button Name="btnSend" Content="Отправить" Margin="5" Padding="10,5" Background="LightBlue"/>
+                <ComboBox Name="cmbTextType" Width="180" Margin="5" VerticalAlignment="Center"/>
             </StackPanel>
 
             <!-- Текстовое поле для ввода -->
@@ -66,8 +68,6 @@
 
                 </StackPanel>
             </ScrollViewer>
-
-
         </Grid>
     </Grid>
 </Window>
