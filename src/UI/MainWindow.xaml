@@ -57,13 +57,13 @@
                     <TextBlock Text="Длины слов" FontWeight="Bold" Margin="0,5"/>
                     <Canvas Name="wordLengthChart" Height="250" Background="#f8f8f8" Margin="0,0,0,10"/>
 
-                    <TextBlock Text="Лексическое разнообразие" FontWeight="Bold" Margin="0,5"/>
+                    <TextBlock Text="Буквы" FontWeight="Bold" Margin="0,5"/>
                     <Canvas Name="lexicalDiversityChart" Height="250" Background="#f8f8f8" Margin="0,0,0,10"/>
 
-                    <TextBlock Text="Частота местоимений" FontWeight="Bold" Margin="0,5"/>
+                    <TextBlock Text="Длины предложений" FontWeight="Bold" Margin="0,5"/>
                     <Canvas Name="pronounChart" Height="250" Background="#f8f8f8" Margin="0,0,0,10"/>
 
-                    <TextBlock Text="Уникальность слов" FontWeight="Bold" Margin="0,5"/>
+                    <TextBlock Text="Знаки" FontWeight="Bold" Margin="0,5"/>
                     <Canvas Name="uniquenessChart" Height="250" Background="#f8f8f8" Margin="0,0,0,10"/>
 
                 </StackPanel>

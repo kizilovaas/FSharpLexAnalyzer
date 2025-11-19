@@ -67,25 +67,100 @@ let initializeWindow (window: Window) =
     // Анализ текста
     // ----------------------
     btnScan.Click.Add(fun _ ->
-        let text = textBox.Text.Trim()
-        if String.IsNullOrEmpty(text) then
-            MessageBox.Show("Введите текст для анализа", "Информация") |> ignore
-        else
-            // 1️⃣ Длины слов
-            let wlData = wordLengthStats text
-            drawChartWithProfiles wordLengthChart "Длины слов" wlData
+    let text = textBox.Text.Trim()
+    if String.IsNullOrEmpty(text) then
+        MessageBox.Show("Введите текст для анализа", "Информация") |> ignore
+    else
+        // 1️⃣ Длины слов
+        let wlData = wordLengthStats text
+        drawChartWithProfiles wordLengthChart "Длины слов" wlData
 
-            // 2️⃣ Лексическое разнообразие
-            let lexData = lexicalDiversityStats text
-            drawChartWithProfiles lexicalDiversityChart "Лекс. разнообр." lexData
+        // 2️⃣ Лексическое разнообразие
+        let lexData = letterFrequencyStats text
+        drawChartWithProfiles lexicalDiversityChart "Лекс. разнообр." lexData
 
-            // 3️⃣ Частота местоимений
-            let pronData = pronounStats text
-            drawChartWithProfiles pronounChart "Местоимения" pronData
+        // 3️⃣ Частота местоимений
+        let pronData = sentenceLengthStats text
+        drawChartWithProfiles pronounChart "Местоимения" pronData
 
-            // 4️⃣ Уникальность слов
-            let uniqData = uniquenessStats text
-            drawChartWithProfiles uniquenessChart "Уникальность" uniqData
+        // 4️⃣ Уникальность слов
+        let uniqData = specialCharsStats text
+        drawChartWithProfiles uniquenessChart "Уникальность" uniqData
+
+        // ----------------------
+        // ФОРМИРУЕМ JSON ДАННЫЕ В НУЖНОМ ФОРМАТЕ
+        // ----------------------
+        
+        // Функция для создания массива в правильном формате
+        let createArray (data: (int * float) list) =
+            let array = Array.zeroCreate 11
+            array.[0] <- 100.0 // первое значение всегда 100
+            for (index, value) in data do
+                if index < 11 && index > 0 then // index 0 уже занят 100.0
+                    array.[index] <- value
+            array
+
+        let wlArray = createArray wlData
+        let lexArray = createArray lexData
+        let pronArray = createArray pronData
+        let uniqArray = createArray uniqData
+        
+        // Поле "5" - создаем массив из 11 элементов
+        let avgSentLen = avgSentenceLength text
+        let lexDiv = lexicalDiversity text
+        let uniqCoeff = uniquenessCoefficient text
+        let wordCount = countWords text
+        let charCount = countSymbol text
+        
+        let metricsArray = [|
+            100.0;
+            avgSentLen;
+            lexDiv * 100.0;
+            uniqCoeff;
+            float wordCount / 10.0;
+            float charCount / 100.0;
+            0.0; 0.0; 0.0; 0.0; 0.0
+        |]
+        
+        // Функция для правильного форматирования массива
+        let formatArray (arr: float[]) =
+            let elements = 
+                arr 
+                |> Array.map (fun x -> 
+                    if x = float (int x) then 
+                        sprintf "%.0f" x  // Целое число без .0
+                    else 
+                        sprintf "%.2f" x) // Дробное число с 2 знаками
+                |> String.concat ", "
+            "[ " + elements + " ]"
+        
+        // Формируем JSON строку в точном формате
+        let jsonText = 
+            "{\n" +
+            "  \"id\": 0,\n" +
+            "  \"name\": \"Название вашего текста\",\n" +
+            "  \"color\": \"Blue\",\n" +
+            "  \"1\": " + (formatArray wlArray) + ",\n" +
+            "  \"2\": " + (formatArray lexArray) + ",\n" +
+            "  \"3\": " + (formatArray pronArray) + ",\n" +
+            "  \"4\": " + (formatArray uniqArray) + ",\n" +
+            "  \"5\": " + (formatArray metricsArray) + "\n" +
+            "}"
+        
+        // ЗАМЕНЯЕМ ТЕКСТ В ТЕКСТОВОМ ПОЛЕ НА JSON ДАННЫЕ
+        //textBox.Text <- jsonText
+        
+        // Показываем статистику в MessageBox
+        let statsMessage = 
+            sprintf "Статистика текста:\n\n" +
+            sprintf "Символов: %d\n" charCount +
+            sprintf "Слов: %d\n" wordCount +
+            sprintf "Средняя длина предложения: %.2f\n" avgSentLen +
+            sprintf "Лексическое разнообразие: %.2f%%\n" (lexDiv * 100.0) +
+            sprintf "Коэффициент уникальности: %.2f\n\n" uniqCoeff +
+            sprintf "JSON данные отображены в текстовом поле"
+        
+        MessageBox.Show(statsMessage, "Анализ завершен") |> ignore
     )
 
     // ----------------------

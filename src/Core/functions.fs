@@ -42,52 +42,53 @@ let wordLengthStats (text: string) : (int * float) list =
         |> Seq.sortBy fst
         |> Seq.toList
 
-/// Распределение лексического разнообразия для графика
-let lexicalDiversityStats (text: string) : (int * float) list =
-    let words =
-        Regex.Matches(text.ToLower(), @"\b\w+\b") |> Seq.cast<Match> |> Seq.map (fun m -> m.Value) |> Seq.toList
-    let total = List.length words
-    if total = 0 then []
+/// Распределение частоты букв для графика
+let letterFrequencyStats (text: string) : (int * float) list =
+    let letters = 
+        text.ToLower().ToCharArray()
+        |> Array.filter Char.IsLetter
+    
+    let totalLetters = letters.Length
+    
+    if totalLetters = 0 then []
     else
-        let counts = words |> List.groupBy id |> List.map (fun (_, ws) -> List.length ws)
-        counts
-        |> List.groupBy id
-        |> List.map (fun (freq, ws) -> freq, float (List.length ws) / float total * 100.0)
-        |> List.sortBy fst
+        letters
+        |> Array.groupBy id
+        |> Array.mapi (fun i (letter, occurrences) -> i, float (Array.length occurrences) / float totalLetters * 100.0)
+        |> Array.sortBy fst
+        |> Array.toList
 
-/// Распределение частоты местоимений для графика
-let pronounStats (text: string) : (int * float) list =
-    let pronouns = ["я"; "ты"; "он"; "она"; "мы"; "вы"; "они"]
-
-    let words =
-        Regex.Matches(text.ToLower(), @"\b\w+\b")
-        |> Seq.cast<Match>
-        |> Seq.map (fun m -> m.Value)
-        |> Seq.toList
-
-    // Считаем сколько каждого местоимения
-    let counts =
-        pronouns
-        |> List.map (fun p -> words |> List.filter ((=) p) |> List.length)
-
-    let totalPronouns = counts |> List.sum
-
-    if totalPronouns = 0 then []
+/// Распределение количества слов в предложениях для графика
+let sentenceLengthStats (text: string) : (int * float) list =
+    let sentences = 
+        Regex.Split(text, @"[.!?]+") 
+        |> Array.filter (fun s -> s.Trim() <> "")
+        |> Array.map (fun s -> countWords s)
+    
+    let totalSentences = sentences.Length
+    
+    if totalSentences = 0 then []
     else
-        counts
-        |> List.mapi (fun i c -> i, float c / float totalPronouns * 100.0)  // X = индекс, Y = процент
-        |> List.filter (fun (_, perc) -> perc > 0.0)
+        sentences
+        |> Array.groupBy id
+        |> Array.map (fun (wordCount, sents) -> wordCount, float (Array.length sents) / float totalSentences * 100.0)
+        |> Array.sortBy fst
+        |> Array.toList
 
-
-/// Распределение уникальности слов для графика
-let uniquenessStats (text: string) : (int * float) list =
-    let words =
-        Regex.Matches(text.ToLower(), @"\b\w+\b") |> Seq.cast<Match> |> Seq.map (fun m -> m.Value) |> Seq.toList
-    let total = List.length words
-    if total = 0 then []
+/// Распределение специальных символов для графика
+let specialCharsStats (text: string) : (int * float) list =
+    let specialChars = 
+        text.ToCharArray()
+        |> Array.filter (fun c -> not (Char.IsLetterOrDigit(c)) && not (Char.IsWhiteSpace(c)))
+    
+    let totalSpecialChars = specialChars.Length
+    
+    if totalSpecialChars = 0 then []
     else
-        let counts = words |> List.groupBy id |> List.map (fun (_, ws) -> List.length ws)
-        counts
-        |> List.groupBy id
-        |> List.map (fun (freq, ws) -> freq, float (List.length ws) / float total * 100.0)
-        |> List.sortBy fst
+        specialChars
+        |> Array.groupBy id
+        |> Array.sortBy (fun (char, _) -> char)
+        |> Array.mapi (fun i (char, occurrences) -> 
+            i,  // X = порядковый номер символа
+            float (Array.length occurrences) / float totalSpecialChars * 100.0)  // Y = процент
+        |> Array.toList
