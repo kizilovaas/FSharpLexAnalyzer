@@ -5,7 +5,7 @@ open System.Windows
 open System.Windows.Controls
 open FSharpLexAnalyzer.UI.Chart
 open functions
-open jsonData
+open jsonData 
 
 let initializeWindow (window: Window) =
 
@@ -27,7 +27,50 @@ let initializeWindow (window: Window) =
     // Загружаем профили при запуске
     let profiles = loadTextProfiles()
 
-    // Заполняем выпадающий список
+    // ----------------------
+    // ФУНКЦИИ АНАЛИЗА СХОДСТВА (ИСПРАВЛЕНО)
+    // ----------------------
+
+    /// Вычисляет Среднюю Абсолютную Ошибку (MAE) между двумя массивами профилей.
+    /// profileA (анализируемый) имеет смещение на 1 (индекс 0 - заглушка).
+    let calculateMAE (profileA: float[]) (profileB: float[]) : float =
+        // profileA имеет длину 11 (индексы 0-10). profileB имеет длину 10 (индексы 0-9).
+        // Сравниваем profileA[i+1] с profileB[i] для i от 0 до 9.
+        
+        let comparisonLength = Math.Min(profileA.Length - 1, profileB.Length)
+        
+        // Создаем массив разностей, сравнивая profileA[i+1] с profileB[i]
+        let differences = 
+            Array.init comparisonLength (fun i -> 
+                let analyzedValue = profileA.[i + 1] // Начинаем с индекса 1 (пропускаем profileA.[0])
+                let jsonValue = profileB.[i]       // Начинаем с индекса 0
+                Math.Abs(analyzedValue - jsonValue)
+            )
+            
+        if comparisonLength = 0 then 0.0 else differences |> Array.average
+
+
+    /// Вычисляет общий процент сходства по 4 профилям
+    let calculateSimilarity (profile: TextProfile) (analyzed: TextProfile) : float =
+        
+        // 1. Сравниваем 4 основные метрики (1, 2, 3, 4)
+        let mae1 = calculateMAE analyzed.``1`` profile.``1``
+        let mae2 = calculateMAE analyzed.``2`` profile.``2``
+        let mae3 = calculateMAE analyzed.``3`` profile.``3``
+        let mae4 = calculateMAE analyzed.``4`` profile.``4``
+        
+        // 2. Вычисляем общее среднее абсолютное отклонение
+        let totalMAE = (mae1 + mae2 + mae3 + mae4) / 4.0
+        
+        // 3. Переводим ошибку в процент сходства: 100% - Avg.MAE
+        let similarity = 100.0 - totalMAE
+        
+        Math.Max(0.0, similarity)
+
+    // ----------------------
+    // ОСНОВНЫЕ ФУНКЦИИ UI
+    // ----------------------
+
     let fillComboBox () =
         cmbTextType.Items.Clear()
         for profile in profiles do
@@ -56,7 +99,6 @@ let initializeWindow (window: Window) =
     btnClear.Click.Add(fun _ ->
         textBox.Clear()
         cmbTextType.SelectedIndex <- -1
-        // Очищаем только текущие данные, но оставляем профили
         drawChartWithProfiles wordLengthChart "Длины слов" []
         drawChartWithProfiles lexicalDiversityChart "Лекс. разнообр." []
         drawChartWithProfiles pronounChart "Местоимения" []
@@ -67,104 +109,113 @@ let initializeWindow (window: Window) =
     // Анализ текста
     // ----------------------
     btnScan.Click.Add(fun _ ->
-    let text = textBox.Text.Trim()
-    if String.IsNullOrEmpty(text) then
-        MessageBox.Show("Введите текст для анализа", "Информация") |> ignore
-    else
-        // 1️⃣ Длины слов
-        let wlData = wordLengthStats text
-        drawChartWithProfiles wordLengthChart "Длины слов" wlData
+        let text = textBox.Text.Trim()
+        if String.IsNullOrEmpty(text) then
+            MessageBox.Show("Введите текст для анализа", "Информация") |> ignore
+        else
+            // Устанавливаем лимит для оси X, чтобы избежать 'улетания' графика
+            let MAX_X_CHART_LIMIT = 10 
+            
+            // --- 1. РАСЧЕТ И ОГРАНИЧЕНИЕ ДАННЫХ ДЛЯ ГРАФИКОВ ---
+            
+            // 1️⃣ Длины слов
+            let wlData = 
+                wordLengthStats text
+                |> List.filter (fun (metric, _) -> metric <= MAX_X_CHART_LIMIT)
+            drawChartWithProfiles wordLengthChart "Длины слов" wlData
 
-        // 2️⃣ Лексическое разнообразие
-        let lexData = letterFrequencyStats text
-        drawChartWithProfiles lexicalDiversityChart "Лекс. разнообр." lexData
+            // 2️⃣ Частота букв
+            let lexData = 
+                letterFrequencyStats text
+                |> List.filter (fun (metric, _) -> metric <= MAX_X_CHART_LIMIT)
+            drawChartWithProfiles lexicalDiversityChart "Лекс. разнообр." lexData
 
-        // 3️⃣ Частота местоимений
-        let pronData = sentenceLengthStats text
-        drawChartWithProfiles pronounChart "Местоимения" pronData
+            // 3️⃣ Длины предложений
+            let pronData = 
+                sentenceLengthStats text
+                |> List.filter (fun (metric, _) -> metric <= MAX_X_CHART_LIMIT)
+            drawChartWithProfiles pronounChart "Местоимения" pronData
 
-        // 4️⃣ Уникальность слов
-        let uniqData = specialCharsStats text
-        drawChartWithProfiles uniquenessChart "Уникальность" uniqData
+            // 4️⃣ Спец. символы
+            let uniqData = 
+                specialCharsStats text
+                |> List.filter (fun (metric, _) -> metric <= MAX_X_CHART_LIMIT)
+            drawChartWithProfiles uniquenessChart "Уникальность" uniqData
 
-        // ----------------------
-        // ФОРМИРУЕМ JSON ДАННЫЕ В НУЖНОМ ФОРМАТЕ
-        // ----------------------
-        
-        // Функция для создания массива в правильном формате
-        let createArray (data: (int * float) list) =
-            let array = Array.zeroCreate 11
-            array.[0] <- 100.0 // первое значение всегда 100
-            for (index, value) in data do
-                if index < 11 && index > 0 then // index 0 уже занят 100.0
-                    array.[index] <- value
-            array
+            // --- 2. ФОРМИРОВАНИЕ JSON ДАННЫХ В НУЖНОМ ФОРМАТЕ ---
 
-        let wlArray = createArray wlData
-        let lexArray = createArray lexData
-        let pronArray = createArray pronData
-        let uniqArray = createArray uniqData
-        
-        // Поле "5" - создаем массив из 11 элементов
-        let avgSentLen = avgSentenceLength text
-        let lexDiv = lexicalDiversity text
-        let uniqCoeff = uniquenessCoefficient text
-        let wordCount = countWords text
-        let charCount = countSymbol text
-        
-        let metricsArray = [|
-            100.0;
-            avgSentLen;
-            lexDiv * 100.0;
-            uniqCoeff;
-            float wordCount / 10.0;
-            float charCount / 100.0;
-            0.0; 0.0; 0.0; 0.0; 0.0
-        |]
-        
-        // Функция для правильного форматирования массива
-        let formatArray (arr: float[]) =
-            let elements = 
-                arr 
-                |> Array.map (fun x -> 
-                    if x = float (int x) then 
-                        sprintf "%.0f" x  // Целое число без .0
-                    else 
-                        sprintf "%.2f" x) // Дробное число с 2 знаками
-                |> String.concat ", "
-            "[ " + elements + " ]"
-        
-        // Формируем JSON строку в точном формате
-        let jsonText = 
-            "{\n" +
-            "  \"id\": 0,\n" +
-            "  \"name\": \"Название вашего текста\",\n" +
-            "  \"color\": \"Blue\",\n" +
-            "  \"1\": " + (formatArray wlArray) + ",\n" +
-            "  \"2\": " + (formatArray lexArray) + ",\n" +
-            "  \"3\": " + (formatArray pronArray) + ",\n" +
-            "  \"4\": " + (formatArray uniqArray) + ",\n" +
-            "  \"5\": " + (formatArray metricsArray) + "\n" +
-            "}"
-        
-        // ЗАМЕНЯЕМ ТЕКСТ В ТЕКСТОВОМ ПОЛЕ НА JSON ДАННЫЕ
-        //textBox.Text <- jsonText
-        
-        // Показываем статистику в MessageBox
-        let statsMessage = 
-            sprintf "Статистика текста:\n\n" +
-            sprintf "Символов: %d\n" charCount +
-            sprintf "Слов: %d\n" wordCount +
-            sprintf "Средняя длина предложения: %.2f\n" avgSentLen +
-            sprintf "Лексическое разнообразие: %.2f%%\n" (lexDiv * 100.0) +
-            sprintf "Коэффициент уникальности: %.2f\n\n" uniqCoeff +
-            sprintf "JSON данные отображены в текстовом поле"
-        
-        MessageBox.Show(statsMessage, "Анализ завершен") |> ignore
+            // Функция для создания массива в правильном формате (исправлено ранее)
+            let createArray (data: (int * float) list) =
+                let array = Array.zeroCreate 11
+                array.[0] <- 100.0 
+                
+                for (metric, value) in data do 
+                    if metric >= 1 && metric <= 10 then 
+                        array.[metric] <- value
+                
+                array
+
+            let wlArray = createArray wlData
+            let lexArray = createArray lexData
+            let pronArray = createArray pronData
+            let uniqArray = createArray uniqData
+            
+            // Поле "5" - массив общих метрик 
+            let avgSentLen = avgSentenceLength text
+            let lexDiv = lexicalDiversity text
+            let uniqCoeff = uniquenessCoefficient text
+            let wordCount = countWords text
+            let charCount = countSymbol text
+            
+            let metricsArray = [|
+                100.0;
+                avgSentLen;
+                lexDiv * 100.0;
+                uniqCoeff;
+                float wordCount / 10.0;
+                float charCount / 100.0;
+                0.0; 0.0; 0.0; 0.0;
+                0.0
+            |]
+            
+            // --- 3. ВЫЧИСЛЕНИЕ СХОДСТВА С ПРОФИЛЯМИ ---
+            
+            // Создаем временный профиль для сравнения
+            let analyzedProfile = 
+                { id = -1; name = "Current Text"; color = "Black";
+                  ``1`` = wlArray; ``2`` = lexArray; ``3`` = pronArray; ``4`` = uniqArray; ``5`` = metricsArray }
+
+            // Вычисляем процент сходства для всех загруженных профилей
+            let similarities = 
+                profiles 
+                |> List.map (fun p -> 
+                    let similarity = calculateSimilarity p analyzedProfile
+                    (p.name, similarity)
+                )
+                |> List.sortByDescending snd // Сортируем по убыванию процента
+
+            // Формируем результирующее сообщение
+            let topMatch = 
+                match similarities with
+                | (name, percent)::_ -> sprintf "%s (Сходство: %.2f%%)" name percent
+                | _ -> "Не удалось определить тип"
+
+            let resultMessage = 
+                let header = "✅ Результаты анализа текста:\n\n"
+                let topMatchText = sprintf "Наиболее похожий тип:\n\t%s\n\n" topMatch
+                let allMatchesText = 
+                    similarities 
+                    |> List.map (fun (name, percent) -> sprintf "• %s: %.2f%%" name percent)
+                    |> String.concat "\n"
+                
+                header + topMatchText + "📊 Сходство по профилям (по убыванию):\n" + allMatchesText
+
+            // Выводим результат итогового анализа
+            MessageBox.Show(resultMessage, "Анализ завершен") |> ignore
     )
 
     // ----------------------
-    // Отправка текста (заглушка)
+    // Отправка текста (оставлена без изменений)
     // ----------------------
     btnSend.Click.Add(fun _ ->
         let text = textBox.Text.Trim()
@@ -177,7 +228,6 @@ let initializeWindow (window: Window) =
         if String.IsNullOrEmpty(text) then
             MessageBox.Show("Введите текст для отправки", "Информация") |> ignore
         else
-            // Заглушка для будущей функциональности
             let charCount = countSymbol text
             let wordCount = countWords text
             
@@ -192,7 +242,6 @@ let initializeWindow (window: Window) =
             
             MessageBox.Show(message, "Отправка текста") |> ignore
             
-            // Логируем в консоль
             printfn "ОТПРАВКА: тип='%s', символы=%d, слова=%d" selectedType charCount wordCount
     )
 
